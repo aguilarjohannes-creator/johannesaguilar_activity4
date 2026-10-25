@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student API Interface</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            background-color: #f4f4f4;
+        }
+
+        h1, h2 {
+            color: #333;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px 5px 10px 0;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .student {
+            background-color: white;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        #result {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Student API Interface</h1>
+
+    <h2>All Students</h2>
+    <button onclick="loadStudents()">Load All Students</button>
+    <div id="result"></div>
+
+    <hr>
+
+    <h2>Load One Student</h2>
+    <label for="studentId">Enter database ID:</label>
+    <input type="number" id="studentId" min="1" value="1">
+    <button onclick="loadStudent()">Load Student Information</button>
+    <div id="singleResult"></div>
+
+    <hr>
+
+    <h2>Students by Program</h2>
+    <button onclick="loadByProgram('BSIT')">Show BSIT Students</button>
+    <button onclick="loadByProgram('BSCS')">Show BSCS Students</button>
+    <div id="programResult"></div>
+
+    <script>
+        function displayStudents(data, elementId) {
+            const result = document.getElementById(elementId);
+
+            if (!Array.isArray(data) || data.length === 0) {
+                result.textContent = "No student records found.";
+                return;
+            }
+
+            result.innerHTML = "";
+
+            data.forEach(student => {
+                const card = document.createElement("div");
+                card.className = "student";
+
+                const fields = [
+                    ["Student ID", student.student_id],
+                    ["Name", student.name],
+                    ["Program", student.program],
+                    ["Year", student.year],
+                    ["Section", student.section]
+                ];
+
+                fields.forEach(([label, value]) => {
+                    const paragraph = document.createElement("p");
+                    const strong = document.createElement("b");
+
+                    strong.textContent = label + ": ";
+                    paragraph.appendChild(strong);
+                    paragraph.appendChild(
+                        document.createTextNode(value ?? "")
+                    );
+
+                    card.appendChild(paragraph);
+                });
+
+                result.appendChild(card);
+            });
+        }
+
+        function loadStudents() {
+            fetch("/students")
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Failed to load students");
+                    }
+                    return response.json();
+                })
+                .then(data => displayStudents(data, "result"))
+                .catch(error => {
+                    document.getElementById("result").textContent =
+                        "Unable to retrieve student records. Check Flask.";
+                });
+        }
+
+        function loadStudent() {
+            const id = document.getElementById("studentId").value;
+            const result = document.getElementById("singleResult");
+
+            if (!id || Number(id) < 1) {
+                result.textContent = "Please enter a valid student ID.";
+                return;
+            }
+
+            fetch("/students/" + encodeURIComponent(id))
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Student not found");
+                    }
+                    return response.json();
+                })
+                .then(student => {
+                    displayStudents([student], "singleResult");
+                })
+                .catch(error => {
+                    result.textContent =
+                        "Unable to retrieve student. Check the database ID.";
+                });
+        }
+
+        function loadByProgram(program) {
+            fetch("/students/program/" + encodeURIComponent(program))
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Failed to load program records");
+                    }
+                    return response.json();
+                })
+                .then(data => displayStudents(data, "programResult"))
+                .catch(error => {
+                    document.getElementById("programResult").textContent =
+                        "Unable to retrieve program records.";
+                });
+        }
+    </script>
+</body>
+</html>
